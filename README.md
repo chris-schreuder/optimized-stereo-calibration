@@ -59,6 +59,18 @@ This module evaluates projection errors of 3D points using external calibration 
   - **Outputs:**
     - Saves evaluation results as `.csv` and copies the best calibration as a `.npz` file.
 
+### Usage of `all_cam_points` in `projection_utils.py`
+
+When using the `projectEval` function from `projection_utils.py`, ensure that `all_cam_points` follows specific conventions to correctly evaluate projection errors and perform calibration:
+
+- **Conventions for `all_cam_points`:**
+  - `all_cam_points[1]`: Must represent the origin of the coordinate system for the camera views.
+  - `all_cam_points[0]`: Indicates a point in the image that corresponds to the x-axis direction from the origin point (`all_cam_points[1]`).
+  - `all_cam_points[3]`: Indicates another point in the image that also corresponds to the x-axis direction from the origin point (`all_cam_points[1]`).
+  - The positions of other points in `all_cam_points` are flexible and do not impact the evaluation directly.
+
+These conventions ensure that the evaluation function correctly interprets the spatial relationship and orientation of the camera views during the projection error computation.
+
 ## Usage
 
 To use these modules, follow these steps:
@@ -77,6 +89,31 @@ To use these modules, follow these steps:
    
 4. **Evaluation:**
    - Call `projectEval()` to evaluate projection errors using calibration and image points.
+
+## Manual Annotation of Checkerboard Corners
+
+### Introduction
+
+In addition to logging individual coordinates, this application can be adapted for manually annotating the corners of a checkerboard pattern. This is particularly useful in scenarios where you need precise control over the points of interest, such as for camera calibration or geometric transformations.
+
+### Implementation Details
+
+To implement manual checkerboard corner annotations using this application, follow these steps:
+
+1. **Define Your Image Filename:**
+   Ensure that you have your checkerboard image ready and specify its filename in the `image_filename` variable within `app.py`. This image should be placed in the appropriate location accessible to the Flask application.
+
+2. **Logging and Storing Coordinates:**
+    Clicking on the checkerboard corners will log the coordinates (x, y) both in the browser and on the server side.
+    These logged coordinates can then be further processed or stored as needed for your application.
+
+### Example Use Case
+
+Annotating checkerboard corners manually using this application allows for accurate gathering of reference points needed for subsequent image processing tasks. The logged coordinates can be used for camera calibration, distortion correction, or any application requiring precise spatial referencing.
+
+### Further Customization
+
+Feel free to extend the functionality of the Flask application (app.py) to suit additional requirements or integrate with other systems. This may involve storing coordinates in a database, implementing real-time visualization, or enhancing user interaction.
 
 ## Dependencies
 
