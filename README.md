@@ -59,7 +59,7 @@ This module evaluates projection errors of 3D points using external calibration 
   - **Outputs:**
     - Saves evaluation results as `.csv` and copies the best calibration as a `.npz` file.
 
-### Usage of `all_cam_points` in `projection_utils.py`
+#### Usage of `all_cam_points` in `projection_utils.py`
 
 When using the `projectEval` function from `projection_utils.py`, ensure that `all_cam_points` follows specific conventions to correctly evaluate projection errors and perform calibration:
 
