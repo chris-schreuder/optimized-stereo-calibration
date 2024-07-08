@@ -132,6 +132,7 @@ def projectPixel(cam_params, xyz):
     image_xy = np.squeeze(image_xy)
     return image_xy[0:2]
 
+
 def projectEval(run_name, main, pair, all_cam_points, image_size=(1600, 1200)):
     """
     Evaluates the projection errors of 3D points using external calibration data and saves the results.
@@ -141,6 +142,7 @@ def projectEval(run_name, main, pair, all_cam_points, image_size=(1600, 1200)):
     main (int): The main identifier.
     pair (int): The pair identifier.
     all_cam_points (list): A list containing the image points from two camera views.
+    image_size (tuple, optional): Size of the image (width, height). Defaults to (1600, 1200).
 
     Returns:
     None
@@ -148,7 +150,7 @@ def projectEval(run_name, main, pair, all_cam_points, image_size=(1600, 1200)):
     # Load the calibration results from CSV
     df = pd.read_csv(f'csvs/{run_name}_external_calibrations_repeats_full_main{main}_pair{pair}.csv')
 
-    # Initialize error lists
+    # Initialize lists to store errors
     errors = []
     errors_pair = []
     perc_errors = []
@@ -163,92 +165,81 @@ def projectEval(run_name, main, pair, all_cam_points, image_size=(1600, 1200)):
         # Load the external calibration data
         data = np.load(f'matrix/external/main{main}_pair{pair}_external_calibration_repeat_{repeat}_{num_frames}_frames.npz')
 
-        # Set initial values for camera parameters
-        R1 = np.eye(3)
-        T1 = np.array([0, 0, 0])
+        # Extract necessary calibration parameters
         R2 = data['R']
-        T2 = data['T']
-        T2 = np.array([T2[0][0], T2[1][0], T2[2][0]]).reshape((3, 1))
-
+        T2 = data['T'].reshape((3, 1))
         cameraMatrix1 = data['mtx_A']
         cameraMatrix2 = data['mtx_B']
 
-        # Form the projection matrices
-        RT1 = np.concatenate([R1, [[0], [0], [0]]], axis=-1)
+        # Construct projection matrices for both cameras
+        RT1 = np.hstack([np.eye(3), np.zeros((3, 1))])
         P1 = cameraMatrix1 @ RT1
-        RT2 = np.concatenate([R2, T2], axis=-1)
+        RT2 = np.hstack([R2, T2])
         P2 = cameraMatrix2 @ RT2
 
-        Ps = [P1, P2]
+        # Triangulate 3D points using multiple views
+        all_results = triangulate_multiple_points(all_cam_points[0], all_cam_points[1], P1, P2)
+        points_initial = np.array(all_results)
 
-        # Triangulate points using multiple views
-        all_results = triangulate_multiple_points(all_cam_points[0], all_cam_points[1], Ps[0], Ps[1])
-        R2_initial = R2.copy()
-        T2_initial = T2.reshape((3, 1)).copy()
-        points_initial = all_results.copy()
-
-        points = np.array(points_initial)
-
-        # Compute the world coordinate system (WCS) transformation
-        x_direction = points[0] - points[1] 
-        z_direction = points[3] - points[1]  
+        # Compute the World Coordinate System (WCS) transformation
+        x_direction = points_initial[0] - points_initial[1]
+        z_direction = points_initial[3] - points_initial[1]
         x_direction /= np.linalg.norm(x_direction)
         z_direction /= np.linalg.norm(z_direction)
         y_direction = np.cross(x_direction, z_direction)
-        x_direction = np.cross(y_direction, z_direction)
-
         R_wcs = np.vstack((x_direction, y_direction, z_direction))
-        M = np.vstack((R_wcs, points[1]))
-        M = np.hstack((M, np.array([[0],[0],[0],[1]])))
+        M = np.vstack((R_wcs, points_initial[1]))
+        M = np.hstack((M, np.array([[0], [0], [0], [1]])))
         M = M.T
 
-        data = np.load(f'matrix/external/main{main}_pair{pair}_external_calibration_repeat_{repeat}_{num_frames}_frames.npz')
-        points = np.array(points)
-        Mint_1 = data['mtx_A']
-        Mint_1 = np.hstack((Mint_1, np.zeros((3, 1))))
-
+        # Project 3D points back to 2D image plane of camera 1
         points_2d = []
-        for point in points:
-            points_2d.append(projectPixelMain(Mint_1, point))
-
+        for point in points_initial:
+            points_2d.append(projectPixelMain(cameraMatrix1, point))
         points_c1_2d = np.array(points_2d)
-        all_cam_points[0] = np.array(all_cam_points[0])
-        #get mean error
-        squared_errors = np.sum((points_c1_2d - all_cam_points[0])**2, axis=1)
 
-        # Calculate the mean error
+        # Compute errors in camera 1's image plane
+        squared_errors = np.sum((points_c1_2d - np.array(all_cam_points[0]))**2, axis=1)
         mean_error = np.sqrt(np.mean(squared_errors))
-        percentage_error = (mean_error / np.sqrt(image_size[0]*image_size[1])) * 100
+        percentage_error = (mean_error / np.sqrt(image_size[0] * image_size[1])) * 100
 
-        # Calculate the mean error
+        # Store errors for camera 1
         errors.append(mean_error)
         perc_errors.append(percentage_error)
-            
-        cam_params={}
-        cam_params['C2']={}
-        cam_params['C2']['R'] = R2_initial
-        cam_params['C2']['T'] = T2_initial
-        cam_params['C2']['mtx'] = cameraMatrix2
 
-        points = np.array(points_initial)
+        # Prepare camera 2's internal parameters
+        cam_params = {
+            'C2': {
+                'R': R2,
+                'T': T2,
+                'mtx': cameraMatrix2
+            }
+        }
 
-        points_internal_c2 = np.array([projectInternal(cam_params['C2'], p) for p in points])
+        # Project 3D points to camera 2's image plane
+        points_internal_c2 = np.array([projectInternal(cam_params['C2'], p) for p in points_initial])
         points_pixel_c2 = np.array([projectPixel(cam_params['C2'], p) for p in points_internal_c2])
 
-        points = np.array(all_cam_points[1])
-        squared_errors = np.sum((points_pixel_c2 - points)**2, axis=1)
-        mean_error = np.sqrt(np.mean(squared_errors))
-        percentage_error = (mean_error / np.sqrt(image_size[0]*image_size[1])) * 100
-        errors_pair.append(mean_error)
-        perc_errors_pair.append(percentage_error)
+        # Compute errors in camera 2's image plane
+        squared_errors_pair = np.sum((points_pixel_c2 - np.array(all_cam_points[1]))**2, axis=1)
+        mean_error_pair = np.sqrt(np.mean(squared_errors_pair))
+        percentage_error_pair = (mean_error_pair / np.sqrt(image_size[0] * image_size[1])) * 100
 
+        # Store errors for camera 2
+        errors_pair.append(mean_error_pair)
+        perc_errors_pair.append(percentage_error_pair)
+
+    # Update DataFrame with errors
     df['error'] = errors
     df['perc_error'] = perc_errors
     df['error_pair'] = errors_pair
     df['perc_error_pair'] = perc_errors_pair
+
+    # Save results to CSV
     df.to_csv(f'csvs/{run_name}_external_calibrations_repeats_main{main}_pair{pair}_w_errors_w_pair_error.csv', index=False)
     print(f'CSV saved as csvs/{run_name}_external_calibrations_repeats_main{main}_pair{pair}_w_errors_w_pair_error.csv')
 
+    # Find and save the best calibration
     idx = df['error'].idxmin()
     filtered_df = df.loc[idx]
     path_best = filtered_df['path'].tolist()[0]
