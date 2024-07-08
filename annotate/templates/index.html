@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Click Logger</title>
+    <style>
+        #image {
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+    <h1>Click on the Image to Log Coordinates</h1>
+    <img id="image" src="{{ url_for('static', filename='frame.jpg') }}" alt="Image" onclick="logClick(event)">
+    <ul id="coordinates"></ul>
+    <script>
+        function logClick(event) {
+            const x = event.offsetX;
+            const y = event.offsetY;
+            const coordinatesList = document.getElementById('coordinates');
+            
+            // Add the coordinates to the list in the browser
+            const li = document.createElement('li');
+            li.textContent = `X: ${x}, Y: ${y}`;
+            coordinatesList.appendChild(li);
+
+            // Send the coordinates to the server
+            fetch('/log_click', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ x: x, y: y })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      console.log(`Logged: (${x}, ${y})`);
+                  }
+              });
+        }
+    </script>
+</body>
+</html>
