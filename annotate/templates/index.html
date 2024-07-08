@@ -11,7 +11,7 @@
 </head>
 <body>
     <h1>Click on the Image to Log Coordinates</h1>
-    <img id="image" src="{{ url_for('static', filename='frame.jpg') }}" alt="Image" onclick="logClick(event)">
+    <img id="image" src="{{ url_for('static', filename=image_filename) }}" alt="Image" onclick="logClick(event)">
     <ul id="coordinates"></ul>
     <script>
         function logClick(event) {
@@ -41,3 +41,4 @@
     </script>
 </body>
 </html>
+
