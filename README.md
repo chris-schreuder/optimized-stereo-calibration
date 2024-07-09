@@ -73,6 +73,8 @@ When using the `projectEval` function from `projection_utils.py`, ensure that `a
 
 These conventions ensure that the evaluation function correctly interprets the spatial relationship and orientation of the camera views during the projection error computation.
 
+![Stereo Calibration Example](img/annotations.png)
+
 ## Usage
 
 To use these modules, follow these steps:
