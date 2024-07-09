@@ -37,9 +37,11 @@ This module performs stereo calibration between two cameras using pairs of image
   - **Outputs:**
     - Saves stereo calibration results and evaluation metrics as `.npz` and `.csv` files respectively.
 
-### Triangulation and Projection (`triangulation_projection.py`)
+### Triangulation and Projection (`projection_utils.py`)
 
 This module provides functions for triangulating 3D points from multiple camera views and projecting 3D points into 2D image coordinates using camera matrices.
+
+![Stereo Calibration Example](img/projection.png)
 
 #### Functionality:
 - `triangulate_multiple_points(imgpoints_Origin, imgpoints_Pair1, projMatr_Origin, projMatr_Pair1)`
