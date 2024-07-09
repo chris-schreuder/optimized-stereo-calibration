@@ -2,6 +2,8 @@
 
 This repository contains Python scripts for stereo calibration and evaluation using OpenCV, designed to calibrate and evaluate stereo camera setups. The toolbox includes functions for intrinsic calibration of individual cameras, stereo calibration between pairs of cameras, triangulation of 3D points, and projection error evaluation. This README provides an overview of the functionality and usage of each module.
 
+![Stereo Calibration Example](img/pipeline.png)
+
 ## Modules
 
 ### Intrinsic Calibration (`opencv_utils.py`)
